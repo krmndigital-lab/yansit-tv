@@ -275,6 +275,9 @@ def images_for(code):
         "featureGraphic": [STORE / "feature-graphic" / f"{code}.png"],
         "tvBanner": [STORE / "tv-banner-1280x720.png"],
         "tvScreenshots": shots,
+        # Play's main listing also demands 2-8 phone/tablet screenshots (16:9 is accepted), even
+        # for a TV-only app: the TV screenshots are the honest picture of the app there too.
+        "phoneScreenshots": shots,
     }
 
 
