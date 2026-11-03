@@ -7,6 +7,7 @@ git tag, see .github/workflows/release.yml):
   check                         auth + what Play currently has (tracks, releases, listings, products)
   listing [--no-images]         store listing in 10 languages, graphics, contact details
   products                      Ayna Pro: yearly subscription ($10) + lifetime one-time product ($20)
+  datasafety                    Data safety section from docs/store/data-safety.csv
   release --track T             upload the AAB and put it on a track (internal/alpha/beta/production)
   testers --track T --group G   attach a Google Group as the testers of a closed track
   promote --from A --to B       copy the newest release of track A to track B
@@ -573,6 +574,15 @@ def cmd_products(play, _a):
         say(f"purchase option state: {opt.get('state')}", "ok")
 
 
+def cmd_datasafety(play, _a):
+    """Data safety section from docs/store/data-safety.csv (Play Console's CSV format)."""
+    csv_path = STORE / "data-safety.csv"
+    if play.dry:
+        return say(f"dry run: would send {csv_path.relative_to(ROOT)}", "ok")
+    play.call("POST", "/dataSafety", {"safetyLabels": csv_path.read_text(encoding="utf-8")})
+    say("data safety section updated", "ok")
+
+
 def cmd_all(play, a):
     cmd_listing(play, a)
     try:
@@ -592,6 +602,7 @@ def main():
     p = sp.add_parser("listing")
     p.add_argument("--no-images", action="store_true")
     sp.add_parser("products")
+    sp.add_parser("datasafety")
     for n in ("release", "all"):
         p = sp.add_parser(n)
         p.add_argument("--track", default="alpha", help="internal | alpha (closed) | beta (open) | production")
@@ -612,7 +623,8 @@ def main():
         listings()  # validate local files before touching Play
     play = Play(load_key(a.key), a.package, a.dry_run)
     fn = {"check": cmd_check, "listing": cmd_listing, "products": cmd_products, "release": cmd_release,
-          "testers": cmd_testers, "promote": cmd_promote, "all": cmd_all}[a.cmd]
+          "testers": cmd_testers, "promote": cmd_promote, "all": cmd_all,
+          "datasafety": cmd_datasafety}[a.cmd]
     try:
         fn(play, a)
     except ApiError as e:

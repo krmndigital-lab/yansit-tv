@@ -11,6 +11,7 @@ from a local machine.
 |---|---|
 | `check` | Shows what Play has now: tracks, releases, listings, uploaded bundles, products |
 | `listing` | Title, short and full description in 10 languages; icon, feature graphic, TV banner, TV screenshots (unchanged files are skipped); contact e-mail and website |
+| `datasafety` | Data safety section from `docs/store/data-safety.csv` (Play Console CSV format; Google Mobile Ads SDK disclosures) |
 | `products` | `yansit_pro_yearly` (yearly, US$10) and `yansit_pro_lifetime` (US$20): local prices for every country, activation. `PRICE_OVERRIDES` sets country prices (Turkey: TRY 199.99 / 399.99) |
 | `release --track alpha` | Uploads the AAB and puts it on a track with release notes in 10 languages |
 | `testers --group x@googlegroups.com` | Attaches a Google Group as the testers of a closed track |
