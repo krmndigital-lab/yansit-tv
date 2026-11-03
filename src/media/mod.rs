@@ -366,6 +366,17 @@ impl MediaEngine {
         self.settings.read().unwrap().clone()
     }
 
+    /// Keep a built-in receiver name in the UI language ("Salon TV" -> "Living Room TV" after a
+    /// switch to English). Custom names are never touched. Re-advertises AirPlay when it changes.
+    pub fn localize_device_name(&self, lang: crate::i18n::Lang) {
+        let mut s = self.settings();
+        if let Some(name) = crate::i18n::localize_preset(&s.device_name, lang) {
+            log::info!("receiver name '{}' -> '{}' ({})", s.device_name, name, lang.code());
+            s.device_name = name.to_string();
+            self.update_settings(s);
+        }
+    }
+
     pub fn update_settings(&self, new_settings: Settings) {
         new_settings.save(&self.state_dir);
         self.video

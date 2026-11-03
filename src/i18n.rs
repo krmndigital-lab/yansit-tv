@@ -207,10 +207,12 @@ pub fn upper(s: &str) -> String {
     o
 }
 
-/// AirPlay receiver name presets for the settings row (first = first-run default).
+/// AirPlay receiver name presets for the settings row (first = first-run default). Same order in
+/// every language (living room, bedroom, kitchen, home cinema, family room, brand), because
+/// `localize_preset` maps names by index.
 pub fn device_name_presets(l: Lang) -> &'static [&'static str] {
     match l {
-        Lang::Tr => &["Salon TV", "Oturma Odası TV", "Yatak Odası TV", "Mutfak TV", "Sinema Odası", "Ayna TV"],
+        Lang::Tr => &["Salon TV", "Yatak Odası TV", "Mutfak TV", "Sinema Odası", "Oturma Odası TV", "Ayna TV"],
         Lang::En => &["Living Room TV", "Bedroom TV", "Kitchen TV", "Home Cinema", "Family Room TV", "Ayna TV"],
         Lang::De => &["Wohnzimmer-TV", "Schlafzimmer-TV", "Küchen-TV", "Heimkino", "Kinderzimmer-TV", "Ayna TV"],
         Lang::Es => &["TV del salón", "TV del dormitorio", "TV de la cocina", "Cine en casa", "TV familiar", "Ayna TV"],
@@ -221,6 +223,19 @@ pub fn device_name_presets(l: Lang) -> &'static [&'static str] {
         Lang::Pl => &["TV w salonie", "TV w sypialni", "TV w kuchni", "Kino domowe", "TV rodzinny", "Ayna TV"],
         Lang::Id => &["TV Ruang Tamu", "TV Kamar Tidur", "TV Dapur", "Home Theater", "TV Keluarga", "Ayna TV"],
     }
+}
+
+/// The same built-in receiver name in another language ("Salon TV" -> "Living Room TV"), so the
+/// name follows the UI language while it is still a preset. `None` for a custom name or when the
+/// name already belongs to `to`.
+pub fn localize_preset(name: &str, to: Lang) -> Option<&'static str> {
+    let target = device_name_presets(to);
+    if target.contains(&name) {
+        return None;
+    }
+    ALL.iter()
+        .find_map(|&l| device_name_presets(l).iter().position(|&n| n == name))
+        .map(|i| target[i])
 }
 
 /// First-run AirPlay name in the device language.
@@ -388,6 +403,20 @@ strings! {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn device_name_follows_language() {
+        use super::{localize_preset, Lang};
+        assert_eq!(localize_preset("Salon TV", Lang::En), Some("Living Room TV"));
+        assert_eq!(localize_preset("Living Room TV", Lang::Tr), Some("Salon TV"));
+        assert_eq!(localize_preset("Mutfak TV", Lang::Ru), Some("ТВ на кухне"));
+        assert_eq!(localize_preset("Salon TV", Lang::Tr), None);
+        assert_eq!(localize_preset("Ayna TV", Lang::De), None);
+        assert_eq!(localize_preset("Benim Odam", Lang::En), None);
+        for l in super::ALL {
+            assert_eq!(super::device_name_presets(l).len(), super::device_name_presets(Lang::En).len());
+        }
+    }
+
     use super::*;
     use std::collections::HashSet;
 

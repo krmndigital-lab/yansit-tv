@@ -310,7 +310,7 @@ def cmd_check(play, _a):
     except ApiError as e:
         say(f"subscriptions: {e}", "w")
     try:
-        otps = play.call("GET", "/onetimeproducts").get("oneTimeProducts", [])
+        otps = play.call("GET", "/oneTimeProducts").get("oneTimeProducts", [])
         for o in otps:
             st = ", ".join(f"{p['purchaseOptionId']}={p.get('state')}" for p in o.get("purchaseOptions", []))
             say(f"one-time {o['productId']}: {st}")
@@ -513,7 +513,7 @@ def cmd_products(play, _a):
 
     say(f"one-time product {LIFE_ID} (US${LIFE_USD})", "h")
     otp_listings = [{"languageCode": l, "title": t[1], "description": t[2]} for l, t in PRODUCT_TEXT.items()]
-    have = play.call("GET", f"/onetimeproducts/{LIFE_ID}", ok404=True)
+    have = play.call("GET", f"/oneTimeProducts/{LIFE_ID}", ok404=True)
     if have is None:
         regions, usd, eur, rv = converted(play, LIFE_USD)
 
@@ -534,7 +534,7 @@ def cmd_products(play, _a):
                                                             "availability": "AVAILABLE"}}]})
         create_dropping_regions(create, regions)
         say(f"created ({len(regions)} countries)", "ok")
-        have = play.call("GET", f"/onetimeproducts/{LIFE_ID}", ok404=True) or {}
+        have = play.call("GET", f"/oneTimeProducts/{LIFE_ID}", ok404=True) or {}
     elif not play.dry:
         play.call("PATCH", f"/onetimeproducts/{LIFE_ID}",
                   query={"updateMask": "listings", "regionsVersion.version": "2022/02"},

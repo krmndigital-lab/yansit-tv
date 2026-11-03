@@ -416,6 +416,10 @@ impl Ui {
             Row::Language => {
                 s.language = s.language.step(forward);
                 let lang = i18n::apply(s.language);
+                // A built-in receiver name moves to the new language too (custom names stay).
+                if let Some(name) = i18n::localize_preset(&s.device_name, lang) {
+                    s.device_name = name.to_string();
+                }
                 tf(K::LabelValue, &[t(K::RowLanguage), lang.native_name()])
             }
             Row::DeviceName => {

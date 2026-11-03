@@ -53,6 +53,9 @@ fn ensure_runtime(files_dir: &str) -> &'static Runtime {
         };
         crate::billing::init(&state_dir);
         let engine = MediaEngine::new(state_dir.clone());
+        // Before the first advertisement: the stored preset name follows the UI language.
+        engine.localize_device_name(crate::i18n::apply(engine.settings().language));
+        engine.take_reconfig_dirty();
         let cfg = engine
             .settings()
             .to_airplay_config(&state_dir, engine.device_id(), 7000);
@@ -134,7 +137,8 @@ pub extern "system" fn Java_com_yansit_tv_N_ensureServer(
     let f = jstr(&mut env, &files);
     detect_device_language(&mut env);
     let rt = ensure_runtime(&f);
-    crate::i18n::apply(rt.engine.settings().language);
+    let lang = crate::i18n::apply(rt.engine.settings().language);
+    rt.engine.localize_device_name(lang);
     if let Ok(vm) = env.get_java_vm() {
         crate::miracast::start_daemon(vm, rt.engine.clone());
     }
@@ -239,7 +243,8 @@ pub extern "system" fn Java_com_yansit_tv_N_create(
     let f = jstr(&mut env, &files);
     detect_device_language(&mut env);
     let rt = ensure_runtime(&f);
-    crate::i18n::apply(rt.engine.settings().language);
+    let lang = crate::i18n::apply(rt.engine.settings().language);
+    rt.engine.localize_device_name(lang);
     if let Ok(vm) = env.get_java_vm() {
         crate::miracast::start_daemon(vm, rt.engine.clone());
     }
