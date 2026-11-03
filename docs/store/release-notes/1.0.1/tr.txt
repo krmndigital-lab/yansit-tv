@@ -1,0 +1,5 @@
+Ayna'nın ilk sürümü:
+• AirPlay, Miracast ve DLNA alıcısı tek uygulamada
+• Donanımsal HEVC/H.264 çözme, 60 fps'ye kadar, düşük gecikme
+• 10 dil, TV'nizin diline göre otomatik seçilir
+• Ayna Pro: 4K yansıtma ve reklamsız kullanım (yıllık veya ömür boyu)

@@ -1,79 +1,72 @@
-# Ayna — Google Play'e otomatik yayın
+# Ayna — automated Google Play publishing
 
-Yayın, Google Play Developer API üzerinden otomatik yapılır. `vX.Y.Z` etiketi gönderildiğinde
-GitHub Actions şu adımları sırayla çalıştırır: testler → imzalı AAB → gizlilik kontrolü → Play
-(mağaza metinleri, görseller, ürünler, sürüm) → GitHub sürümü. Aynı işlem yerelde
-`./publish.sh` ile de yapılabilir.
+Releases go through the Google Play Developer API. Pushing a tag `vX.Y.Z` (equal to the
+`version` in `Cargo.toml`) makes GitHub Actions run: tests → signed AAB → privacy check → Google
+Play (store listing, graphics, products, release) → GitHub release. `./publish.sh` does the same
+from a local machine.
 
-## Otomatik yapılanlar (`tools/play/publish.py`)
+## What `tools/play/publish.py` automates
 
-| Komut | Ne yapar |
+| Command | What it does |
 |---|---|
-| `check` | Play'deki durumu gösterir: kanallar, sürümler, diller, ürünler |
-| `listing` | 10 dilde başlık, kısa ve uzun açıklama; simge, öne çıkan grafik, TV banner'ı, TV ekran görüntüleri; iletişim e-postası ve web sitesi |
-| `products` | `yansit_pro_yearly` (yıllık, 10 $) ve `yansit_pro_lifetime` (ömür boyu, 20 $): tüm ülkeler için yerel fiyat dönüşümü ve etkinleştirme |
-| `release --track alpha` | AAB'yi yükler, 10 dilde sürüm notuyla kanala koyar |
-| `testers --group x@googlegroups.com` | Kapalı test kanalına test grubunu bağlar |
-| `promote --from alpha --to production` | Test sürümünü üretime taşır (`--rollout 0.2` ile kademeli) |
+| `check` | Shows what Play has now: tracks, releases, listings, uploaded bundles, products |
+| `listing` | Title, short and full description in 10 languages; icon, feature graphic, TV banner, TV screenshots (unchanged files are skipped); contact e-mail and website |
+| `products` | `yansit_pro_yearly` (yearly, US$10) and `yansit_pro_lifetime` (US$20): local prices for every country, activation. `PRICE_OVERRIDES` sets country prices (Turkey: TRY 199.99 / 399.99) |
+| `release --track alpha` | Uploads the AAB and puts it on a track with release notes in 10 languages |
+| `testers --group x@googlegroups.com` | Attaches a Google Group as the testers of a closed track |
+| `promote --from alpha --to production` | Moves the newest release of one track to another (`--rollout 0.2` for a staged rollout) |
 | `all --track T` | listing + products + release |
 
-Sürüm numarası tek yerde tutulur: `Cargo.toml` → `version`. versionCode bundan otomatik
-hesaplanır (1.0.0 → 10000). Play daha önce 2 numaralı sürümü gördüğü için hiçbir zaman 3'ün
-altına inilmez.
+A never-published ("draft") app only accepts draft releases; the tool then saves the release as a
+draft and says so. After the first rollout from Play Console, releases go out automatically.
 
-## Bir kez yapılması gerekenler (API'nin yapamadıkları)
+The version has one source: `version` in `Cargo.toml`. versionCode is derived from it
+(MAJOR·10000 + MINOR·100 + PATCH, so 1.0.0 → 10000). Play has already seen versionCode 2, so it
+must never go below 3.
 
-1. **Hizmet hesabı (robot kullanıcı).** Google Cloud konsolunda:
-   1. <https://console.cloud.google.com/projectcreate> → proje adı `krmn-play` → Oluştur.
-   2. <https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com> →
-      **Etkinleştir** ("Google Play Android Developer API").
-   3. <https://console.cloud.google.com/iam-admin/serviceaccounts> → **Hizmet hesabı oluştur** →
-      ad `play-publisher` → rol vermeden **Bitti**.
-   4. Hesaba tıkla → **Anahtarlar** → **Anahtar ekle → Yeni anahtar → JSON**. Bir dosya iner.
-   5. Play Console → **Kullanıcılar ve izinler** → **Yeni kullanıcıları davet et** → e-posta
-      alanına hizmet hesabının adresini yaz (`play-publisher@krmn-play.iam.gserviceaccount.com`
-      gibi). **Uygulama izinleri → Uygulama ekle → Ayna** → tüm kutuları işaretle → **Uygula →
-      Kullanıcıyı davet et**. ("API erişimi" menüsü artık yok; doğru yer burası.)
-   6. İnen JSON dosyasını sunucuya yükle. Sunucuda `~/.config/krmn/play-service-account.json`
-      konumuna (izin 600) konur ve GitHub secret'ı `PLAY_SERVICE_ACCOUNT_JSON` olarak eklenir.
-      Bu dosya hiçbir zaman depoya girmez.
+## One-time setup (done)
 
-2. **Play Console'daki beyan formları.** Bunlar API ile doldurulamaz. Her uygulamada bir kez
-   doldurulur; yanıtlar aşağıdaki tabloda hazır.
+- Google Cloud project `krmn-play-publisher` with the Google Play Android Developer API enabled.
+- Service account `play-publisher@krmn-play-publisher.iam.gserviceaccount.com`, invited in Play
+  Console with app-level permissions for Ayna only (releases, testers, store listing, products,
+  app content; no financial data, no user management).
+- Its key lives outside the repository (`~/.config/krmn/play-service-account.json`, mode 600) and
+  as the GitHub Actions secret `PLAY_SERVICE_ACCOUNT_JSON`.
+- GitHub secrets `UPLOAD_KEYSTORE_B64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_ALIAS`,
+  `UPLOAD_KEY_PASSWORD` (Play App Signing upload key) and the variable `PLAY_TRACK`
+  (`alpha` = closed testing until production access is granted, then `production`).
+- Payments profile (merchant account) in Play Console: required before any paid product exists.
 
-3. **Kapalı test (yalnızca kişisel hesaplar için).** 13 Kasım 2023'ten sonra açılan kişisel
-   geliştirici hesaplarında, üretime geçmeden önce **en az 12 test kullanıcısının 14 gün
-   kesintisiz** kapalı testte kalması gerekir. Bu kural her yeni uygulama için tekrarlanır.
-   Kuruluş (şirket) hesaplarında bu kural yoktur; kuruluş hesabı için D-U-N-S numarası gerekir.
-   1. <https://groups.google.com/my-groups> → **Grup oluştur** → ad `ayna-test`, "Kimler
-      katılabilir: Web'de herkes" → Oluştur.
-   2. Grup adresi bildirilir, ardından `publish.py testers --group ayna-test@googlegroups.com`
-      çalıştırılır.
-   3. 12 kişiye iki bağlantı gönder: grubun katılım sayfası ve
-      <https://play.google.com/apps/testing/com.yansit.tv> (katılım bağlantısı).
-   4. 14 gün sonra: Play Console → Kontrol paneli → **Üretime erişim başvurusu** (form yanıtları
-      aşağıda). Onay gelince `promote --from alpha --to production` çalıştırılır.
+## Play Console steps the API cannot do
 
-## Play Console yanıtları (Uygulama içeriği)
+1. **App content declarations** (once per app). Suggested answers:
 
-| Bölüm | Yanıt |
-|---|---|
-| Gizlilik politikası | `https://krmndigital-lab.github.io/yansit-tv/` |
-| Uygulama erişimi | Tüm işlevler özel erişim gerektirmeden kullanılabilir. Not (İngilizce): *Testing needs a second device on the same Wi-Fi: an iPhone/iPad/Mac (Control Center → Screen Mirroring), a Windows 10/11 PC (Win + K) or an Android phone with Miracast, or any DLNA app.* |
-| Reklamlar | **Evet, reklam içeriyor** |
-| İçerik derecelendirmesi | Kategori: **Araç / Yardımcı program, Üretkenlik, İletişim veya Diğer**. Şiddet, cinsellik, küfür, kumar, uyuşturucu: hepsi **Hayır**. Kullanıcılar arası etkileşim / içerik paylaşımı: **Hayır**. Konum paylaşımı: **Hayır**. Dijital ürün satın alma: **Evet**. Sınırsız internet / web tarayıcı: **Hayır** |
-| Hedef kitle | **18 ve üzeri** (en sorunsuzu; 13+ da olur, 13 yaş altı seçilmemeli) |
-| Veri güvenliği | Veri topluyor veya paylaşıyor: **Evet** (yalnızca AdMob SDK, ücretsiz sürüm). Aktarımda şifreli: **Evet**. Silme talebi: **Hayır** (hesap yok, geliştirici veri tutmuyor). Türler: *Yaklaşık konum*, *Cihaz veya diğer kimlikler*, *Uygulama etkileşimleri* (toplanıyor ve paylaşılıyor; amaç: Reklam, Analiz, Dolandırıcılık önleme); *Teşhis* (toplanıyor; Analiz, Dolandırıcılık önleme). Hepsi "zorunlu". Ayrıntı: `docs/store/privacy-policy.md` ek bölüm |
-| Reklam kimliği | **Evet**, amaç: Reklam |
-| Ön plan hizmeti | Tür **Bağlı cihaz**. Açıklama: *Keeps the AirPlay/Miracast/DLNA receiver reachable so phones and PCs can connect while the TV shows other apps.* Video gerekirse: telefondan yansıtma başlatılırken TV'nin kaydı |
-| Kamu, finans, sağlık, haber uygulaması | Hepsi **Hayır** |
-| Kategori | **Video Oynatıcılar ve Düzenleyiciler** |
-| Cihaz türleri | Sürüm → Gelişmiş ayarlar → **Cihaz türleri → Android TV** katılımı |
-| Fiyat | Ücretsiz, tüm ülkeler |
+   | Section | Answer |
+   |---|---|
+   | Privacy policy | `https://krmndigital-lab.github.io/yansit-tv/` |
+   | App access | All functionality is available without special access |
+   | Ads | Yes, the app contains ads |
+   | Content rating | Category *Utility, Productivity, Communication or Other*; every question **No** except "users can purchase digital goods": **Yes** |
+   | Target audience | **18 and over**; "appeals to children": **No** |
+   | Data safety | Collects/shares data: **Yes** (Google Mobile Ads SDK, free tier only). Encrypted in transit: **Yes**. Deletion request: **No** (no accounts). Approximate location, Device or other IDs, App interactions: collected and shared for Advertising, Analytics, Fraud prevention; Diagnostics: collected for Analytics, Fraud prevention. All required. Details: appendix of `docs/store/privacy-policy.md` |
+   | Advertising ID | Yes: advertising/marketing, fraud prevention |
+   | Foreground service | Type *Connected device*: "Keeps the AirPlay/Miracast/DLNA receiver reachable so phones and PCs can connect while the TV shows other apps." |
+   | Government, financial, health, news | No |
+   | Category | App → Video Players & Editors |
+   | Form factors | Test and release → Advanced settings → Form factors → **Android TV** |
 
-## Sonraki her sürüm
+2. **First rollout** of the draft release: Closed testing → Alpha → Countries/regions (all) →
+   Edit release → Review → Start rollout → Publishing overview → Send changes for review.
 
-`Cargo.toml` içindeki `version` artırılır, `docs/store/release-notes/<sürüm>/` altına notlar
-yazılır ve `git tag vX.Y.Z && git push --tags` çalıştırılır. Gerisini GitHub Actions yapar.
-Hangi kanala gideceğini GitHub değişkeni `PLAY_TRACK` belirler (`alpha` → üretim izni gelince
-`production`).
+3. **Closed test with 12+ testers for 14 days** (personal developer accounts created after
+   13 Nov 2023, for every new app). Testers join the Google Group `ayna-test@googlegroups.com`
+   (attached to the `alpha` track) and opt in via the signup page
+   <https://krmndigital-lab.github.io/yansit-tv/test/>. Afterwards: Dashboard → Apply for
+   production, then `publish.py promote --from alpha --to production` and set `PLAY_TRACK` to
+   `production`. Organization accounts (D-U-N-S number) do not have this requirement.
+
+## Every later release
+
+Raise `version` in `Cargo.toml`, add notes under `docs/store/release-notes/<version>/`, then
+`git tag vX.Y.Z && git push --tags`. GitHub Actions does the rest; the track comes from the
+`PLAY_TRACK` variable.

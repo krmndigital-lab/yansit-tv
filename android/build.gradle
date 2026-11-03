@@ -1,4 +1,4 @@
-// Yansıt — Android Gradle (AGP) build. GPL-3.0-or-later. See docs/BUILD.md + docs/MONETIZATION.md.
+// Ayna (com.yansit.tv) — Android Gradle (AGP) build. GPL-3.0-or-later. See docs/BUILD.md + docs/MONETIZATION.md.
 //
 // * libyansit.so is built from the Rust crate in the repo root (../Cargo.toml) by a per-variant
 //   `cargoBuild<Variant>` task: one `cargo build --release --target <triple>` per ABI

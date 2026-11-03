@@ -210,7 +210,7 @@ fn run_p2p_daemon_android(vm: jni::JavaVM, sink: Arc<dyn Sink>) {
                         start_session(
                             peer_ip.to_string(),
                             7236,
-                            "Miracast Cihazı".to_string(),
+                            crate::i18n::t(crate::i18n::K::ClientMiracast).to_string(),
                             Some(stream),
                             sink.clone(),
                         );

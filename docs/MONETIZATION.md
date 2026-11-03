@@ -43,7 +43,7 @@ Rust → Java (polled every vsync by MainActivity, same pattern as `awake()` / `
 public static native int  pollBillingAction(); // 0 none, 1 buy yearly, 2 buy lifetime, 3 restore, 4 manage subs, 5 open Play listing (rate)
 public static native boolean pollShowInterstitial(); // true once when an interstitial should show
 ```
-Rust sets these from the UI (user pressed "Yükselt → Yıllık / Ömür boyu / Satın alımları geri yükle")
+Rust sets these from the UI (user pressed "Upgrade → Yearly / Lifetime / Restore purchases")
 and from the session-gate logic (free tier, after a mirror session ends).
 
 ## Ads

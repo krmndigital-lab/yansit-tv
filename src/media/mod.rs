@@ -505,7 +505,7 @@ impl MediaEngine {
             s.paused = false;
             s.meta = Metadata {
                 title: if title.is_empty() {
-                    "DLNA Akışı".to_string()
+                    crate::i18n::t(crate::i18n::K::DlnaStream).to_string()
                 } else {
                     title
                 },

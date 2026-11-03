@@ -1,4 +1,4 @@
-// Yansıt — Gradle settings (single-module build; this directory IS the app module).
+// Ayna (com.yansit.tv) — Gradle settings (single-module build; this directory IS the app module).
 // GPL-3.0-or-later. See docs/BUILD.md.
 pluginManagement {
     repositories {

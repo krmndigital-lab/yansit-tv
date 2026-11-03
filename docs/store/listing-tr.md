@@ -1,8 +1,8 @@
-# Ayna — Google Play mağaza girişi: Türkçe (`tr-TR`)
+# Ayna — Google Play store listing: Turkish (`tr-TR`)
 
-> Play Console → *Büyüme → Mağaza varlığı → Ana mağaza girişi → Türkçe* alanlarına kopyalayın.
-> Sınırlar kontrol edildi: başlık ≤ 30, kısa açıklama ≤ 80, tam açıklama ≤ 4000 karakter.
-> Tüm iddialar koda dayanır (kaynak tablosu: `listing-en.md` → "Claim sources").
+> Store text for the Turkish listing (uploaded by `tools/play/publish.py listing`). Limits checked:
+> title ≤ 30, short description ≤ 80, full description ≤ 4000 characters. Every claim is backed
+> by the code (see "Claim sources" in `listing-en.md`).
 
 ## Title
 
@@ -10,8 +10,7 @@
 Ayna: AirPlay & Miracast TV
 ```
 
-(Tam 30 karakter. Önce marka, sonra tanımlayıcı ifade. AirPlay, Miracast, Chromecast, Apple veya
-Samsung uygulamanın kendi adı gibi kullanılmaz; başlıkta "ücretsiz", "en iyi", fiyat vb. olmaz.)
+(Exactly 30 characters: brand first, then a plain descriptive phrase.)
 
 ## Short description
 
@@ -77,25 +76,5 @@ AirPlay, iPhone, iPad ve Mac, Apple Inc.'in; Miracast, Wi-Fi Alliance'ın; DLNA,
 
 ---
 
-## Mağaza ayarları (genel, bir kez yapılır)
-
-| Ayar | Öneri |
-|---|---|
-| Kategori | **Video Oynatıcılar ve Düzenleyiciler** (alternatif: Araçlar) |
-| Etiketler | Play'in hazır listesinden en yakın olanları seçin (video oynatıcı, yayın/aktarım). Serbest etiket girilemez. |
-| İçerik derecelendirmesi (IARC) | Beklenen sonuç **Herkes / PEGI 3 / USK 0**. Uygulama kendi içeriğini üretmez: şiddet, cinsellik, küfür, kumar ya da kullanıcılar arası sohbet yoktur. Yalnızca kullanıcının kendi cihazından gönderdiğini gösterir. Web'de gezinme sunmaz (DLNA, yalnızca kullanıcının kendi gönderen uygulamasının ilettiği bağlantıyı oynatır), bu yüzden "sınırsız internet erişimi" sorusuna **Hayır** deyin. Son derecelendirmeyi IARC verir. |
-| Reklam içerir | **Evet** (yalnızca ücretsiz sürümde, oturumlar arasında AdMob geçiş reklamı). Bu yanıt, yüklenen derlemeyle uyumlu olmalıdır. |
-| Uygulama içi satın alma | Evet: `yansit_pro_yearly` (abonelik, temel plan `yearly`, 10,00 ABD doları) ve `yansit_pro_lifetime` (tek seferlik, 20,00 ABD doları). Ülke fiyatları Play Console'da belirlenir. |
-| Hedef kitle | **Yalnızca 13 yaş ve üzeri gruplar.** 13 yaş altı bir grup seçilirse Aileler politikası devreye girer (sertifikalı reklam ağları, daha sıkı reklam kuralları). |
-| Veri güvenliği | `privacy-policy.md` ekine bakın (geliştirici hiçbir veri toplamaz; ücretsiz sürümde AdMob SDK reklam verisi toplar). |
-| Uygulama erişimi (inceleme ekibi için) | Giriş gerekmez. İnceleme notu (İngilizce yazın): *"Testing needs a second device on the same Wi-Fi: an iPhone/iPad/Mac (Control Center → Screen Mirroring), a Windows 10/11 PC or Android phone with Miracast, or any DLNA app."* |
-| Cihaz türleri | **Android TV** için katılım (Yayın → Gelişmiş ayarlar → Cihaz türleri). TV banner'ı, en az bir TV ekran görüntüsü ve Google'ın TV kalite incelemesi gerekir. |
-
-## Ek bilgiler
-
-- Gizlilik politikası URL'si: `docs/store/privacy-policy.md` sayfasını herkese açık statik bir sayfa
-  olarak yayımlayın (ör. GitHub Pages) ve adresi Play Console → *Uygulama içeriği → Gizlilik
-  politikası* alanına girin.
-- Kaynak kodu (GPL-3.0-or-later): `https://github.com/krmndigital-lab/yansit-tv`. Yukarıdaki "AÇIK KAYNAK" paragrafı,
-  GPLv3 §6(d)'nin istediği "nesne kodunun yanında açık yönlendirme"dir; bkz. `SOURCE-OFFER.md`.
-- Destek e-postası (Play Console iletişim bilgileri): `krmndigital@gmail.com`.
+Store settings, content rating, data safety and the other Play Console answers are the same for
+every language: see `listing-en.md` and `docs/PLAY_PUBLISHING.md`.
