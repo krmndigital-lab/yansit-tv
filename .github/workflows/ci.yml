@@ -1,0 +1,33 @@
+# Every push / PR: host tests + both Android ABIs type-check + publisher syntax. No secrets used.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup target add armv7-linux-androideabi aarch64-linux-android
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ci-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+      - name: Tests (host)
+        run: cargo test --release
+      - name: Type-check armeabi-v7a + arm64-v8a
+        run: |
+          cargo check --release --lib --target armv7-linux-androideabi
+          cargo check --release --lib --target aarch64-linux-android
+      - name: Publisher script compiles
+        run: python3 -I -m py_compile tools/play/publish.py

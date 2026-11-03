@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_name">Ayna-Empfänger</string>
+    <string name="notif_channel_desc">Hält den AirPlay-, Miracast- und DLNA-Empfänger im Hintergrund aktiv</string>
+    <string name="notif_title">Ayna-Empfänger ist aktiv</string>
+    <string name="notif_text">Bereit für iPhone, iPad, Mac, Android und Windows</string>
+    <string name="perm_dialog_title">Geräte in der Nähe finden</string>
+    <string name="perm_dialog_desc">Android benötigt diese Berechtigung, damit Smartphones und PCs diesen Fernseher über Wi-Fi Direct (Miracast) finden. Ayna liest, speichert oder teilt Ihren Standort nie.</string>
+    <string name="perm_dialog_ok">Weiter</string>
+    <string name="perm_dialog_later">Nicht jetzt</string>
+</resources>

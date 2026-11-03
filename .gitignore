@@ -1,0 +1,18 @@
+/target/
+/android/build/
+/ref/
+# Signing material: never commit keystores or their passwords (Play App Signing upload key).
+/android/*.keystore
+/android/*.jks
+/android/keystore.properties
+/android/*service-account*.json
+/android/*play*.json
+*.json.key
+/tools/*service-account*.json
+*service-account*.json
+__pycache__/
+# Gradle / local machine state
+/android/.gradle/
+/android/local.properties
+/android/.kotlin/
+/tools/bundletool.jar

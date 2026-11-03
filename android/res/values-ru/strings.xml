@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_name">Приёмник Ayna</string>
+    <string name="notif_channel_desc">Поддерживает работу приёмника AirPlay, Miracast и DLNA в фоне</string>
+    <string name="notif_title">Приёмник Ayna активен</string>
+    <string name="notif_text">Готов к iPhone, iPad, Mac, Android и Windows</string>
+    <string name="perm_dialog_title">Поиск устройств поблизости</string>
+    <string name="perm_dialog_desc">Android требует это разрешение, чтобы телефоны и ПК находили этот телевизор через Wi-Fi Direct (Miracast). Ayna никогда не считывает, не сохраняет и не передаёт ваше местоположение.</string>
+    <string name="perm_dialog_ok">Продолжить</string>
+    <string name="perm_dialog_later">Не сейчас</string>
+</resources>

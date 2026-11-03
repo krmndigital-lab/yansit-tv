@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_name">Penerima Ayna</string>
+    <string name="notif_channel_desc">Menjaga penerima AirPlay, Miracast, dan DLNA tetap berjalan di latar belakang</string>
+    <string name="notif_title">Penerima Ayna aktif</string>
+    <string name="notif_text">Siap untuk iPhone, iPad, Mac, Android, dan Windows</string>
+    <string name="perm_dialog_title">Pencarian perangkat terdekat</string>
+    <string name="perm_dialog_desc">Android memerlukan izin ini agar ponsel dan PC dapat menemukan TV ini melalui Wi-Fi Direct (Miracast). Ayna tidak pernah membaca, menyimpan, atau membagikan lokasi Anda.</string>
+    <string name="perm_dialog_ok">Lanjutkan</string>
+    <string name="perm_dialog_later">Nanti saja</string>
+</resources>

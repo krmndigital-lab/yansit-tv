@@ -1,0 +1,11 @@
+# Android targets: armeabi-v7a (32-bit userland, common on TV boxes) and arm64-v8a (required by
+# Play). The NDK linker / CC / AR are NOT set here: android/build.gradle (Play build) and the
+# android/build_*.sh scripts export CARGO_TARGET_<TRIPLE>_LINKER, CC_*, CXX_* and AR_* from
+# $ANDROID_HOME/ndk/27.2.12479018, so no machine-specific path lives in the repo.
+# `cargo check --target ...` needs no linker at all.
+[target.armv7-linux-androideabi]
+rustflags = ["-C", "target-feature=+neon"]
+
+[target.aarch64-linux-android]
+# 16 KB page alignment: required on newer 64-bit devices / Play for arm64 native code.
+rustflags = ["-C", "link-arg=-Wl,-z,max-page-size=16384"]

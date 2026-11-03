@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_name">Ricevitore Ayna</string>
+    <string name="notif_channel_desc">Mantiene attivo in background il ricevitore AirPlay, Miracast e DLNA</string>
+    <string name="notif_title">Il ricevitore Ayna è attivo</string>
+    <string name="notif_text">Pronto per iPhone, iPad, Mac, Android e Windows</string>
+    <string name="perm_dialog_title">Ricerca di dispositivi vicini</string>
+    <string name="perm_dialog_desc">Android richiede questa autorizzazione affinché telefoni e PC trovino questa TV tramite Wi-Fi Direct (Miracast). Ayna non legge, salva o condivide mai la tua posizione.</string>
+    <string name="perm_dialog_ok">Continua</string>
+    <string name="perm_dialog_later">Non ora</string>
+</resources>

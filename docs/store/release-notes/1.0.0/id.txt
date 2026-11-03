@@ -1,0 +1,5 @@
+Rilis pertama Ayna:
+• Penerima AirPlay, Miracast, dan DLNA dalam satu aplikasi
+• Dekode hardware HEVC/H.264, hingga 60 fps, latensi rendah
+• 10 bahasa, dipilih otomatis sesuai TV Anda
+• Ayna Pro: pencerminan 4K dan tanpa iklan (tahunan atau seumur hidup)

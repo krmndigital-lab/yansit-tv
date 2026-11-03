@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_name">Ayna alıcısı</string>
+    <string name="notif_channel_desc">AirPlay, Miracast ve DLNA alıcısını arka planda çalışır tutar</string>
+    <string name="notif_title">Ayna alıcısı etkin</string>
+    <string name="notif_text">iPhone, iPad, Mac, Android ve Windows için hazır</string>
+    <string name="perm_dialog_title">Yakındaki cihazları bulma izni</string>
+    <string name="perm_dialog_desc">Android, telefon ve bilgisayarların bu TV\'yi Wi-Fi Direct (Miracast) ile bulabilmesi için bu izni ister. Ayna konumunuzu asla okumaz, kaydetmez veya paylaşmaz.</string>
+    <string name="perm_dialog_ok">Devam et</string>
+    <string name="perm_dialog_later">Şimdi değil</string>
+</resources>

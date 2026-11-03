@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_name">Receptor Ayna</string>
+    <string name="notif_channel_desc">Mantiene el receptor AirPlay, Miracast y DLNA activo en segundo plano</string>
+    <string name="notif_title">El receptor Ayna está activo</string>
+    <string name="notif_text">Listo para iPhone, iPad, Mac, Android y Windows</string>
+    <string name="perm_dialog_title">Búsqueda de dispositivos cercanos</string>
+    <string name="perm_dialog_desc">Android necesita este permiso para que móviles y PC encuentren esta TV por Wi-Fi Direct (Miracast). Ayna nunca lee, guarda ni comparte tu ubicación.</string>
+    <string name="perm_dialog_ok">Continuar</string>
+    <string name="perm_dialog_later">Ahora no</string>
+</resources>

@@ -1,0 +1,224 @@
+// Yansıt — Android Gradle (AGP) build. GPL-3.0-or-later. See docs/BUILD.md + docs/MONETIZATION.md.
+//
+// * libyansit.so is built from the Rust crate in the repo root (../Cargo.toml) by a per-variant
+//   `cargoBuild<Variant>` task: one `cargo build --release --target <triple>` per ABI
+//   (armeabi-v7a = armv7-linux-androideabi, arm64-v8a = aarch64-linux-android); AGP strips it and keeps the symbol table.
+//   The output dir is registered as a generated jniLibs source, so AGP wires the task order.
+// * The release variant (Google Play AAB) never enables the Rust `dev-pro` feature. Only debug
+//   builds may, and only when asked: `./gradlew -PdevPro=true assembleDebug`.
+// * Sources stay where the non-Gradle scripts expect them (java/, res/, AndroidManifest.xml).
+import javax.inject.Inject
+
+plugins {
+    id 'com.android.application' version '8.5.2'
+}
+
+// Keep Gradle outputs apart from android/build/{gen,obj,dex,pkg,...} used by the shell scripts.
+layout.buildDirectory = file('build/gradle')
+
+def ndkVer = '27.2.12479018'
+
+// --- Version: single source of truth = ../Cargo.toml `version = "MAJOR.MINOR.PATCH"` ---------
+// versionCode = MAJOR*10000 + MINOR*100 + PATCH (1.0.0 -> 10000), overridable for a rebuild of the
+// same version with -PversionCode=N (Play rejects a versionCode it has already seen).
+def cargoVersion = (file('../Cargo.toml').text =~ /(?m)^version\s*=\s*"(\d+)\.(\d+)\.(\d+)"/)
+if (!cargoVersion.find()) throw new GradleException('Cargo.toml has no version = "x.y.z"')
+def appVersionName = "${cargoVersion.group(1)}.${cargoVersion.group(2)}.${cargoVersion.group(3)}"
+def appVersionCode = findProperty('versionCode')?.toString()?.toInteger() ?:
+        (cargoVersion.group(1).toInteger() * 10000 + cargoVersion.group(2).toInteger() * 100 + cargoVersion.group(3).toInteger())
+def minApi = 30
+def rustAbis = ['armeabi-v7a': 'armv7-linux-androideabi', 'arm64-v8a': 'aarch64-linux-android']
+
+// cargo: -Pyansit.cargo=/path/to/cargo, else ~/.cargo/bin/cargo, else `cargo` from PATH.
+def homeCargo = new File(System.getProperty('user.home'), '.cargo/bin/cargo')
+def cargoBin = findProperty('yansit.cargo')?.toString() ?: (homeCargo.exists() ? homeCargo.absolutePath : 'cargo')
+
+// --- Signing (secrets never live in committed files) ------------------------------------------
+// android/keystore.properties (gitignored; template: keystore.properties.example). Each key falls
+// back to an env var: YANSIT_KEYSTORE / YANSIT_STORE_PASSWORD / YANSIT_KEY_ALIAS / YANSIT_KEY_PASSWORD.
+def ksProps = new Properties()
+def ksFile = file('keystore.properties')
+if (ksFile.exists()) ksFile.withInputStream { ksProps.load(it) }
+def ks = { String key, String env -> ksProps.getProperty(key) ?: System.getenv(env) }
+def releaseStore = ks('storeFile', 'YANSIT_KEYSTORE')
+
+// android/local.properties (gitignored): machine-local, never published.
+def localProps = new Properties()
+if (file('local.properties').exists()) file('local.properties').withInputStream { localProps.load(it) }
+def localProp = { String key -> localProps.getProperty(key) ?: '' }
+
+abstract class CargoNdkTask extends DefaultTask {
+    @Input abstract Property<String> getCargo()
+    @Input abstract ListProperty<String> getFeatures()
+    @Input abstract MapProperty<String, String> getAbiTriples()
+    @Input abstract Property<Integer> getApi()
+    @Internal abstract DirectoryProperty getCrateDir()
+    @Internal abstract DirectoryProperty getCargoTargetDir()
+    @Internal abstract DirectoryProperty getNdkDir()
+    @OutputDirectory abstract DirectoryProperty getOutputDir()
+    @Inject abstract ExecOperations getExecOps()
+
+    CargoNdkTask() {
+        // cargo has its own fine-grained incremental build; always let it decide.
+        outputs.upToDateWhen { false }
+    }
+
+    /** --remap-path-prefix for the crate, $CARGO_HOME and $RUSTUP_HOME (space separated). */
+    static String remapFlags(File crate) {
+        def home = System.getProperty('user.home')
+        def cargoHome = System.getenv('CARGO_HOME') ?: "${home}/.cargo"
+        def rustupHome = System.getenv('RUSTUP_HOME') ?: "${home}/.rustup"
+        [[crate.canonicalPath, '/ayna'], [cargoHome, '/cargo'], [rustupHome, '/rustup'], [home, '/home']]
+                .collect { "--remap-path-prefix=${it[0]}=${it[1]}" }.join(' ')
+    }
+
+    @TaskAction
+    void build() {
+        def os = System.getProperty('os.name').toLowerCase()
+        def win = os.contains('win')
+        def host = os.contains('mac') ? 'darwin-x86_64' : (win ? 'windows-x86_64' : 'linux-x86_64')
+        def bin = new File(ndkDir.get().asFile, "toolchains/llvm/prebuilt/${host}/bin")
+        if (!bin.isDirectory()) throw new GradleException("NDK toolchain not found: ${bin} (install NDK ${ndkDir.get().asFile.name})")
+        def exe = win ? '.exe' : ''
+        def cmd = win ? '.cmd' : ''
+        def targetDir = cargoTargetDir.get().asFile
+        def out = outputDir.get().asFile
+        out.deleteDir()
+        abiTriples.get().each { String abi, String triple ->
+            // NDK clang wrappers name armv7 "armv7a-linux-androideabi<api>-clang".
+            def clangTriple = triple == 'armv7-linux-androideabi' ? 'armv7a-linux-androideabi' : triple
+            def cc = new File(bin, "${clangTriple}${api.get()}-clang${cmd}").absolutePath
+            def cxx = new File(bin, "${clangTriple}${api.get()}-clang++${cmd}").absolutePath
+            def key = triple.replace('-', '_')
+            def args = [cargo.get(), 'build', '--release', '--lib', '--target', triple]
+            if (!features.get().isEmpty()) args += ['--features', features.get().join(',')]
+            logger.lifecycle("cargo: ${abi} (${triple})${features.get() ? ' features=' + features.get().join(',') : ''}")
+            execOps.exec { spec ->
+                spec.workingDir(crateDir.get().asFile)
+                spec.commandLine(args)
+                // Env beats ../.cargo/config.toml, so this works with any SDK location.
+                spec.environment('CARGO_TARGET_DIR', targetDir.absolutePath)
+                spec.environment("CARGO_TARGET_${key.toUpperCase()}_LINKER".toString(), cc)
+                spec.environment("CC_${key}".toString(), cc)
+                spec.environment("CXX_${key}".toString(), cxx)
+                spec.environment("AR_${key}".toString(), new File(bin, "llvm-ar${exe}").absolutePath)
+                // GPL source offer shown in Settings → About (src/ui/mod.rs SOURCE_URL).
+                spec.environment('YANSIT_SOURCE_URL', 'https://github.com/krmndigital-lab/yansit-tv')
+                // No build-machine paths (user name, home dir) in panic messages inside the .so.
+                // Cargo appends these to the target rustflags from ../.cargo/config.toml.
+                spec.environment("CARGO_TARGET_${key.toUpperCase()}_RUSTFLAGS".toString(), remapFlags(crateDir.get().asFile))
+            }
+            def so = new File(targetDir, "${triple}/release/libyansit.so")
+            def dst = new File(out, "${abi}/libyansit.so")
+            dst.parentFile.mkdirs()
+            // Unstripped on purpose: AGP strips it for the APK/AAB and keeps the symbol table as
+            // native debug symbols for Play Console crash/ANR reports (debugSymbolLevel below).
+            java.nio.file.Files.copy(so.toPath(), dst.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+}
+
+android {
+    namespace 'com.yansit.tv'
+    compileSdk 34
+    ndkVersion ndkVer
+
+    defaultConfig {
+        applicationId 'com.yansit.tv'
+        minSdk minApi
+        targetSdk 34
+        versionCode appVersionCode
+        versionName appVersionName
+        ndk { abiFilters 'armeabi-v7a', 'arm64-v8a' }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['java']
+            res.srcDirs = ['res']
+            jniLibs.srcDirs = []   // filled per variant by cargoBuild<Variant>
+        }
+    }
+
+    signingConfigs {
+        // Same key as build_apk.sh (Android's public debug credentials), so a Gradle debug APK
+        // installs over a script-built one. Falls back to ~/.android/debug.keystore if absent.
+        if (file('debug.keystore').exists()) {
+            debug {
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+        if (releaseStore) {
+            release {
+                storeFile file(releaseStore)
+                storePassword ks('storePassword', 'YANSIT_STORE_PASSWORD')
+                keyAlias ks('keyAlias', 'YANSIT_KEY_ALIAS')
+                keyPassword ks('keyPassword', 'YANSIT_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildFeatures { buildConfig true }
+
+    buildTypes {
+        debug {
+            // Owner's AdMob test-device hashes for debug builds only (never in a Play build).
+            buildConfigField 'String', 'ADMOB_TEST_DEVICES', "\"${localProp('admob.testDevices').replaceAll('[^A-Za-z0-9,]', '')}\""
+        }
+        release {
+            buildConfigField 'String', 'ADMOB_TEST_DEVICES', '""'
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Upload key for Play App Signing; without keystore.properties the AAB is unsigned.
+            signingConfig signingConfigs.findByName('release')
+            // Symbol tables go into the AAB (BUNDLE-METADATA), so Play symbolicates native crashes.
+            ndk { debugSymbolLevel 'SYMBOL_TABLE' }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    packaging {
+        // Matches android:extractNativeLibs="true" in the manifest (compressed .so, smaller download).
+        jniLibs { useLegacyPackaging true }
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        boolean release = variant.buildType == 'release'
+        boolean devPro = !release && findProperty('devPro')?.toString() == 'true'
+        if (release && findProperty('devPro')?.toString() == 'true') {
+            logger.warn('devPro=true is IGNORED for the release variant (Play builds never force Pro).')
+        }
+        def task = tasks.register("cargoBuild${variant.name.capitalize()}", CargoNdkTask) {
+            group = 'rust'
+            description = "Builds libyansit.so (cargo --release) for ${rustAbis.keySet().join(' + ')} (${variant.name})."
+            cargo.set(cargoBin)
+            features.set(devPro ? ['dev-pro'] : [])
+            abiTriples.set(rustAbis)
+            api.set(minApi)
+            crateDir.set(layout.projectDirectory.dir('..'))
+            // dev-pro gets its own target dir, so it can never leak into a Play build's .so.
+            cargoTargetDir.set(layout.projectDirectory.dir(devPro ? '../target/dev-pro' : '../target'))
+            ndkDir.set(androidComponents.sdkComponents.sdkDirectory.map { it.dir("ndk/${ndkVer}") })
+            // outputDir is set by addGeneratedSourceDirectory below:
+            // build/gradle/generated/jniLibs/cargoBuild<Variant>/<abi>/libyansit.so
+        }
+        variant.sources.jniLibs.addGeneratedSourceDirectory(task) { CargoNdkTask t -> t.outputDir }
+    }
+}
+
+dependencies {
+    // Google Play Billing Library 8.x (subscriptions + one-time products).
+    implementation 'com.android.billingclient:billing:8.3.0'
+    // Google Mobile Ads SDK (AdMob) — interstitial only, free tier only (docs/MONETIZATION.md).
+    implementation 'com.google.android.gms:play-services-ads:24.9.0'
+}
