@@ -54,6 +54,12 @@ STORE_SHOTS = re.compile(r"^0[1-5]-.*\.png$")  # 06-about.png is for review only
 # ---- Ayna Pro products (docs/MONETIZATION.md) -------------------------------------------------
 SUB_ID, BASE_PLAN, SUB_USD = "yansit_pro_yearly", "yearly", "10"
 LIFE_ID, LIFE_OPTION, LIFE_USD = "yansit_pro_lifetime", "lifetime", "20"
+# Country prices that replace Google's USD conversion (tax-inclusive local prices). Turkey: Google
+# suggests TRY 599.99 / 1199.99 for US$10 / US$20; Ayna sells at roughly a third of that there.
+PRICE_OVERRIDES = {
+    SUB_ID: {"TR": {"currencyCode": "TRY", "units": "199", "nanos": 990000000}},
+    LIFE_ID: {"TR": {"currencyCode": "TRY", "units": "399", "nanos": 990000000}},
+}
 PRODUCT_TEXT = {  # lang: (yearly title, lifetime title, description)
     "en-US": ("Ayna Pro (yearly)", "Ayna Pro (lifetime)", "4K mirroring and no ads."),
     "tr-TR": ("Ayna Pro (yıllık)", "Ayna Pro (ömür boyu)", "4K yansıtma ve reklamsız kullanım."),
@@ -359,20 +365,37 @@ def cmd_listing(play, a):
         raise
 
 
+DRAFT_APP_HINT = ("Play still treats the app as a draft (never published), so the release was saved "
+                  "as a DRAFT on the track. Finish the Play Console setup checklist and start this "
+                  "first rollout there once; later releases go out automatically.")
+
+
 def put_release(play, eid, track, rel):
-    """tracks.update; a never-published (draft) app only accepts draft releases."""
+    """tracks.update + commit. A never-published (draft) app only accepts draft releases; Play
+    may report that at tracks.update or only at commit, so both are retried as a draft."""
+    def as_draft(r):
+        r = dict(r, status="draft")
+        r.pop("userFraction", None)
+        return r
+
     try:
         play.call("PUT", f"/edits/{eid}/tracks/{track}", {"track": track, "releases": [rel]})
-        return rel["status"]
     except ApiError as e:
         if "draft app" not in e.message or rel["status"] == "draft":
             raise
-        rel = dict(rel, status="draft")
-        rel.pop("userFraction", None)
+        rel = as_draft(rel)
         play.call("PUT", f"/edits/{eid}/tracks/{track}", {"track": track, "releases": [rel]})
-        say("Play still treats the app as a draft, so the release was saved as a DRAFT. "
-            "Finish the Play Console setup checklist once; later releases go out automatically.", "w")
-        return "draft"
+        say(DRAFT_APP_HINT, "w")
+    try:
+        return rel["status"], play.commit(eid)
+    except ApiError as e:
+        if "draft app" not in e.message or rel["status"] == "draft":
+            raise
+        rel = as_draft(rel)
+        play.call("PUT", f"/edits/{eid}/tracks/{track}", {"track": track, "releases": [rel]})
+        result = play.commit(eid)
+        say(DRAFT_APP_HINT, "w")
+        return "draft", result
 
 
 def cmd_release(play, a):
@@ -398,13 +421,12 @@ def cmd_release(play, a):
                "status": a.status if a.status != "auto" else "completed"}
         if a.rollout and a.rollout < 1.0:
             rel["status"], rel["userFraction"] = "inProgress", a.rollout
-        st = put_release(play, eid, a.track, rel)
+        st, result = put_release(play, eid, a.track, rel)
         say(f"track {a.track}: {name} ({vc}) → {st}", "ok")
-        result = play.commit(eid)
     except BaseException:
         play.discard(eid)
         raise
-    if a.track not in ("production",) and result == "sent":
+    if a.track != "production" and result == "sent" and st != "draft":
         say(f"testers get it from https://play.google.com/apps/testing/{play.pkg}", "i")
     return result
 
@@ -433,9 +455,8 @@ def cmd_promote(play, a):
                "releaseNotes": top.get("releaseNotes", []), "status": "completed"}
         if a.rollout and a.rollout < 1.0:
             rel["status"], rel["userFraction"] = "inProgress", a.rollout
-        st = put_release(play, eid, a.target, rel)
+        st, _ = put_release(play, eid, a.target, rel)
         say(f"{a.source} → {a.target}: {rel['name']} {rel['versionCodes']} ({st})", "ok")
-        play.commit(eid)
     except BaseException:
         play.discard(eid)
         raise
@@ -476,6 +497,7 @@ def cmd_products(play, _a):
     have = play.call("GET", f"/subscriptions/{SUB_ID}", ok404=True)
     if have is None:
         regions, usd, eur, rv = converted(play, SUB_USD)
+        regions.update(PRICE_OVERRIDES.get(SUB_ID, {}))
 
         def create(regs):
             if play.dry:
@@ -516,6 +538,7 @@ def cmd_products(play, _a):
     have = play.call("GET", f"/oneTimeProducts/{LIFE_ID}", ok404=True)
     if have is None:
         regions, usd, eur, rv = converted(play, LIFE_USD)
+        regions.update(PRICE_OVERRIDES.get(LIFE_ID, {}))
 
         def create(regs):
             if play.dry:
