@@ -291,6 +291,8 @@ pub struct LiveSnapshot {
 
 struct RollingWindow {
     window_start_ns: u64,
+    /// Arrival time of the previous video frame (0 = none yet).
+    last_frame_ns: u64,
     frames_in_win: u32,
     bytes_in_win: u64,
     fps: f32,
@@ -301,6 +303,7 @@ impl Default for RollingWindow {
     fn default() -> Self {
         Self {
             window_start_ns: monotonic_ns(),
+            last_frame_ns: 0,
             frames_in_win: 0,
             bytes_in_win: 0,
             fps: 0.0,
@@ -686,8 +689,19 @@ impl Sink for MediaEngine {
         let bytes = frame.data.len() as u64;
         {
             let mut rw = self.rolling.lock().unwrap();
-            rw.frames_in_win += 1;
-            rw.bytes_in_win += bytes;
+            // First frame of a session / after a stall (> 250 ms without frames): the window starts
+            // AT this frame and counts the frames after it. Otherwise the first reading averages
+            // in the idle time before the session (it showed "44 FPS" for a 60 fps stream).
+            let idle = rw.last_frame_ns == 0 || now.saturating_sub(rw.last_frame_ns) > 250_000_000;
+            rw.last_frame_ns = now;
+            if idle {
+                rw.window_start_ns = now;
+                rw.frames_in_win = 0;
+                rw.bytes_in_win = 0;
+            } else {
+                rw.frames_in_win += 1;
+                rw.bytes_in_win += bytes;
+            }
             let elapsed_ns = now.saturating_sub(rw.window_start_ns);
             if elapsed_ns >= 500_000_000 {
                 let secs = (elapsed_ns as f32) / 1_000_000_000.0;

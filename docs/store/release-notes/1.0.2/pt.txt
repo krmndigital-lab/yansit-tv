@@ -1,0 +1,5 @@
+Primeira versão do Ayna:
+• Receptor AirPlay, Miracast e DLNA em um só app
+• Decodificação por hardware HEVC/H.264, até 60 fps, baixa latência
+• 10 idiomas, escolhidos automaticamente pela sua TV
+• Ayna Pro: espelhamento em 4K e sem anúncios (anual ou vitalício)
