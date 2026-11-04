@@ -60,7 +60,7 @@ must never go below 3.
    Edit release → Review → Start rollout → Publishing overview → Send changes for review.
 
 3. **Closed test with 12+ testers for 14 days** (personal developer accounts created after
-   13 Nov 2023, for every new app). Testers join the Google Group `ayna-test@googlegroups.com`
+   13 Nov 2023, for every new app). Testers join the Google Group `krmndigital@googlegroups.com` (shared by all KRMN Digital apps; the older `ayna-test@googlegroups.com` stays attached too)
    (attached to the `alpha` track) and opt in via the signup page
    <https://krmndigital-lab.github.io/yansit-tv/test/>. Afterwards: Dashboard → Apply for
    production, then `publish.py promote --from alpha --to production` and set `PLAY_TRACK` to
